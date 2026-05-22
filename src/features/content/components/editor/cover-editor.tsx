@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { sanitizeInline } from '@/lib/sanitize'
 import type { Content } from '@/types/content'
 
 interface CoverEditorProps {
@@ -52,7 +53,7 @@ export function CoverEditor({ labelTopoCapa, labelCapa, hookCapa, onChange }: Co
               <p className="text-xs font-medium text-muted-foreground mb-1">Preview:</p>
               <p
                 className="text-sm leading-relaxed [&>em]:italic [&>em]:text-primary [&>.strong]:font-bold"
-                dangerouslySetInnerHTML={{ __html: hookCapa }}
+                dangerouslySetInnerHTML={{ __html: sanitizeInline(hookCapa) }}
               />
             </div>
           )}

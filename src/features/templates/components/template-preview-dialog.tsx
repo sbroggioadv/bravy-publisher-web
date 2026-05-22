@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { sanitizeTemplate } from '@/lib/sanitize'
 import type { Template } from '@/types/template'
 import { PERSONA_COLORS } from '@/lib/constants'
 import type { Persona } from '@/types/content'
@@ -93,7 +94,7 @@ export function TemplatePreviewDialog({
           </p>
           <div
             className="max-h-48 overflow-auto rounded-md bg-muted/30 p-3 text-xs font-mono border"
-            dangerouslySetInnerHTML={{ __html: template.htmlContent }}
+            dangerouslySetInnerHTML={{ __html: sanitizeTemplate(template.htmlContent) }}
           />
         </div>
       </DialogContent>

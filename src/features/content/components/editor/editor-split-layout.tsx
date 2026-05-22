@@ -4,14 +4,18 @@ import { useState, useCallback, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDebounce } from '@/hooks/use-debounce'
 import { updateContent } from '../../api/content-api'
+import { triggerRender } from '../../api/render-api'
 import { CoverEditor } from './cover-editor'
 import { SlideEditorCard } from './slide-editor-card'
 import { CtaEditor } from './cta-editor'
 import { CaptionEditor } from './caption-editor'
 import { EditorActionsBar } from './editor-actions-bar'
+import { PublishDialog } from './publish-dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { sanitizeInline } from '@/lib/sanitize'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 import type { Content, Slide } from '@/types/content'
 
 interface EditorSplitLayoutProps {
@@ -34,6 +38,7 @@ export function EditorSplitLayout({ content }: EditorSplitLayoutProps) {
   })
 
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
+  const [publishMode, setPublishMode] = useState<'now' | 'schedule' | null>(null)
 
   const debouncedData = useDebounce(formData, 30000)
 
@@ -45,9 +50,19 @@ export function EditorSplitLayout({ content }: EditorSplitLayoutProps) {
     },
   })
 
+  const renderMutation = useMutation({
+    mutationFn: () => triggerRender(content.id),
+    onSuccess: () => {
+      toast.success('Renderizacao iniciada')
+      queryClient.invalidateQueries({ queryKey: ['content', content.id] })
+    },
+    onError: (err: Error) => {
+      toast.error(`Falha ao renderizar: ${err.message}`)
+    },
+  })
+
   useEffect(() => {
     if (debouncedData !== formData) return
-    // Only auto-save if data actually changed from original
     const hasChanges =
       debouncedData.labelTopoCapa !== content.labelTopoCapa ||
       debouncedData.labelCapa !== content.labelCapa ||
@@ -95,15 +110,15 @@ export function EditorSplitLayout({ content }: EditorSplitLayoutProps) {
   }
 
   function handleRender() {
-    // Placeholder - trigger render job
+    renderMutation.mutate()
   }
 
   function handleSchedule() {
-    // Placeholder - open schedule dialog
+    setPublishMode('schedule')
   }
 
   function handlePublish() {
-    // Placeholder - trigger publish
+    setPublishMode('now')
   }
 
   return (
@@ -163,7 +178,7 @@ export function EditorSplitLayout({ content }: EditorSplitLayoutProps) {
                   </p>
                   <div
                     className="text-sm leading-relaxed text-zinc-300 [&>em]:italic [&>em]:text-white [&>.strong]:font-bold [&>.strong]:text-white"
-                    dangerouslySetInnerHTML={{ __html: formData.hookCapa }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeInline(formData.hookCapa) }}
                   />
                 </div>
 
@@ -250,7 +265,7 @@ export function EditorSplitLayout({ content }: EditorSplitLayoutProps) {
                   <p className="text-xs text-zinc-400 mb-3">{formData.ctaLabel}</p>
                   <div
                     className="text-sm font-medium [&>.keyword]:rounded [&>.keyword]:bg-primary/30 [&>.keyword]:px-1 [&>.keyword]:font-bold"
-                    dangerouslySetInnerHTML={{ __html: formData.ctaText }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeInline(formData.ctaText) }}
                   />
                   <p className="mt-2 text-[10px] text-zinc-500">{formData.ctaSub}</p>
                 </div>
@@ -276,11 +291,23 @@ export function EditorSplitLayout({ content }: EditorSplitLayoutProps) {
         status={content.status}
         lastSavedAt={lastSavedAt}
         isSaving={saveMutation.isPending}
+        isRendering={renderMutation.isPending}
         onSaveDraft={handleSaveDraft}
         onRender={handleRender}
         onSchedule={handleSchedule}
         onPublish={handlePublish}
       />
+
+      {publishMode && (
+        <PublishDialog
+          contentId={content.id}
+          mode={publishMode}
+          open={publishMode !== null}
+          onOpenChange={(open) => {
+            if (!open) setPublishMode(null)
+          }}
+        />
+      )}
     </div>
   )
 }

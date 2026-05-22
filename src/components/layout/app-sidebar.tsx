@@ -1,15 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   FileText,
   Palette,
-  Users,
   BarChart3,
   CalendarDays,
   LogOut,
+  Settings,
   Zap,
   ChevronsUpDown,
 } from 'lucide-react'
@@ -40,12 +40,12 @@ const navItems = [
   { href: '/content', label: 'Conteudos', icon: FileText },
   { href: '/calendar', label: 'Calendario', icon: CalendarDays },
   { href: '/templates', label: 'Templates', icon: Palette },
-  { href: '/accounts', label: 'Contas', icon: Users },
   { href: '/analytics', label: 'Analiticos', icon: BarChart3 },
 ]
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { user, logout } = useAuth()
   const initials = user?.name
     ?.split(' ')
@@ -141,6 +141,11 @@ export function AppSidebar() {
               <span className="text-xs text-gray-500">
                 {user?.tenantName || 'Bravy'}
               </span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push('/settings')}>
+              <Settings className="mr-2 h-4 w-4" />
+              Configurações
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

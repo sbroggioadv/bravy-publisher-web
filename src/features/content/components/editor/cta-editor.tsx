@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { sanitizeInline } from '@/lib/sanitize'
 import type { Content } from '@/types/content'
 
 type CtaField = 'ctaLabelTopo' | 'ctaLabel' | 'ctaText' | 'ctaSub'
@@ -54,7 +55,7 @@ export function CtaEditor({ ctaLabelTopo, ctaLabel, ctaText, ctaSub, onChange }:
               <p className="text-xs font-medium text-muted-foreground mb-1">Preview:</p>
               <p
                 className="text-sm [&>.keyword]:rounded [&>.keyword]:bg-primary/20 [&>.keyword]:px-1 [&>.keyword]:font-semibold [&>.keyword]:text-primary"
-                dangerouslySetInnerHTML={{ __html: ctaText }}
+                dangerouslySetInnerHTML={{ __html: sanitizeInline(ctaText) }}
               />
             </div>
           )}

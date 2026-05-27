@@ -9,6 +9,7 @@ import { useWizardStore } from './wizard-store'
 export function StepPattern() {
   const pattern = useWizardStore((s) => s.pattern)
   const setPattern = useWizardStore((s) => s.setPattern)
+  const nextStep = useWizardStore((s) => s.nextStep)
 
   return (
     <div className="space-y-6">
@@ -32,7 +33,10 @@ export function StepPattern() {
                   ? 'ring-2 ring-primary shadow-md'
                   : 'hover:ring-1 hover:ring-foreground/10'
               )}
-              onClick={() => setPattern(p.value)}
+              onClick={() => {
+                setPattern(p.value)
+                nextStep()
+              }}
             >
               <CardContent className="flex items-start gap-4">
                 <div

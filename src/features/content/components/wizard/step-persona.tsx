@@ -27,6 +27,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 export function StepPersona() {
   const persona = useWizardStore((s) => s.persona)
   const setPersona = useWizardStore((s) => s.setPersona)
+  const nextStep = useWizardStore((s) => s.nextStep)
 
   return (
     <div className="space-y-6">
@@ -60,7 +61,10 @@ export function StepPersona() {
                     }
                   : undefined
               }
-              onClick={() => setPersona(p.value)}
+              onClick={() => {
+                setPersona(p.value)
+                nextStep()
+              }}
             >
               <CardContent className="flex items-start gap-4">
                 <div

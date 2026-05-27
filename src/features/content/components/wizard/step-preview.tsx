@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { sanitizeInline } from '@/lib/sanitize'
 import { useWizardStore } from './wizard-store'
 
 export function StepPreview() {
@@ -66,7 +67,10 @@ export function StepPreview() {
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Hook
             </p>
-            <p className="text-base font-semibold">{generatedContent.hookCapa}</p>
+            <p
+              className="text-base font-semibold [&>em]:italic [&>em]:text-primary [&>.strong]:font-bold"
+              dangerouslySetInnerHTML={{ __html: sanitizeInline(generatedContent.hookCapa) }}
+            />
           </div>
         </CardContent>
       </Card>
@@ -162,7 +166,10 @@ export function StepPreview() {
               <p className="text-sm font-medium">{generatedContent.ctaLabel}</p>
             )}
             {generatedContent.ctaText && (
-              <p className="text-base font-semibold">{generatedContent.ctaText}</p>
+              <p
+                className="text-base font-semibold [&>.keyword]:rounded [&>.keyword]:bg-primary/20 [&>.keyword]:px-1 [&>.keyword]:text-primary"
+                dangerouslySetInnerHTML={{ __html: sanitizeInline(generatedContent.ctaText) }}
+              />
             )}
             {generatedContent.ctaSub && (
               <p className="text-sm text-muted-foreground">

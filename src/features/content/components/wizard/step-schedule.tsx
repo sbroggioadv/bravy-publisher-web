@@ -13,6 +13,8 @@ import { Separator } from '@/components/ui/separator'
 import { api } from '@/lib/api-client'
 import { PLATFORMS } from '@/lib/constants'
 import type { SocialAccount } from '@/types/social-account'
+import { updateContent } from '../../api/content-api'
+import { publishContent } from '../../api/publishing-api'
 import { useWizardStore } from './wizard-store'
 
 const MOCK_ACCOUNTS: SocialAccount[] = [
@@ -117,25 +119,42 @@ export function StepSchedule() {
 
     setSubmitting(true)
     try {
+      await updateContent(generatedContent.id, {
+        caption: generatedContent.caption,
+      } as Partial<Parameters<typeof updateContent>[1]>)
+
       if (asDraft) {
-        await api.patch(`/content/${generatedContent.id}`, {
-          status: 'DRAFT',
-          caption: generatedContent.caption,
-        })
         toast.success('Conteudo salvo como rascunho!')
-      } else {
-        await api.patch(`/content/${generatedContent.id}`, {
-          status: publishNow ? 'PUBLISHING' : 'SCHEDULED',
-          caption: generatedContent.caption,
-          scheduledAt: publishNow ? new Date().toISOString() : scheduledAt,
-          socialAccountIds: selectedAccountIds,
-        })
-        toast.success(
-          publishNow ? 'Publicando conteudo!' : 'Conteudo agendado com sucesso!'
-        )
+        return
       }
-    } catch {
-      toast.error('Erro ao salvar. Tente novamente.')
+
+      if (selectedAccountIds.length === 0) {
+        toast.error('Selecione pelo menos uma conta para publicar')
+        return
+      }
+
+      const when =
+        publishNow || !scheduledAt
+          ? undefined
+          : new Date(scheduledAt).toISOString()
+
+      await Promise.all(
+        selectedAccountIds.map((socialAccountId) =>
+          publishContent(generatedContent.id, {
+            socialAccountId,
+            scheduledAt: when,
+          }),
+        ),
+      )
+
+      toast.success(
+        publishNow
+          ? `Publicacao enviada para ${selectedAccountIds.length} conta(s)!`
+          : `Conteudo agendado em ${selectedAccountIds.length} conta(s)!`,
+      )
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao salvar'
+      toast.error(msg)
     } finally {
       setSubmitting(false)
     }

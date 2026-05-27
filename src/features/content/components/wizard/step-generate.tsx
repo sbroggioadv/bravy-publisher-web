@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { PERSONAS, PATTERNS, PERSONA_COLORS } from '@/lib/constants'
 import { api } from '@/lib/api-client'
 import type { Content } from '@/types/content'
+import { mapApiContent } from '../../lib/content-mapper'
 import { useWizardStore } from './wizard-store'
 
 export function StepGenerate() {
@@ -43,7 +44,8 @@ export function StepGenerate() {
     (contentId: string) => {
       pollingRef.current = setInterval(async () => {
         try {
-          const { data } = await api.get<Content>(`/content/${contentId}`)
+          const { data: raw } = await api.get<Content>(`/contents/${contentId}`)
+          const data = mapApiContent(raw)
           if (data.status === 'READY') {
             stopPolling()
             setGeneratedContent(data)
@@ -72,12 +74,12 @@ export function StepGenerate() {
     setErrorMessage('')
 
     try {
-      const { data } = await api.post<Content>('/generation/generate', {
-        contentType: 'CAROUSEL',
+      const { data: raw } = await api.post<Content>('/generation/generate', {
+        tema: theme,
         persona,
         pattern,
-        theme,
       })
+      const data = mapApiContent(raw)
 
       if (data.status === 'READY') {
         setGeneratedContent(data)

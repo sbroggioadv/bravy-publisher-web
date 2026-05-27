@@ -18,6 +18,7 @@ interface WizardState {
   setSchedule: (date: string | null) => void
   nextStep: () => void
   prevStep: () => void
+  goToStep: (step: number) => void
   reset: () => void
 }
 
@@ -38,6 +39,8 @@ export const useWizardStore = create<WizardState>((set) => ({
   setSchedule: (date) => set({ scheduledAt: date }),
   nextStep: () => set((s) => ({ currentStep: Math.min(s.currentStep + 1, 6) })),
   prevStep: () => set((s) => ({ currentStep: Math.max(s.currentStep - 1, 1) })),
+  goToStep: (step) =>
+    set(() => ({ currentStep: Math.min(Math.max(step, 1), 6) })),
   reset: () =>
     set({
       currentStep: 1,

@@ -18,6 +18,7 @@ export function StepGenerate() {
   const persona = useWizardStore((s) => s.persona)
   const pattern = useWizardStore((s) => s.pattern)
   const theme = useWizardStore((s) => s.theme)
+  const template = useWizardStore((s) => s.template)
   const setGeneratedContent = useWizardStore((s) => s.setGeneratedContent)
   const nextStep = useWizardStore((s) => s.nextStep)
 
@@ -78,6 +79,7 @@ export function StepGenerate() {
         tema: theme,
         persona,
         pattern,
+        ...(template !== 'auto' ? { template } : {}),
       })
       const data = mapApiContent(raw)
 

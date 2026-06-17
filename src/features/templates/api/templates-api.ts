@@ -8,9 +8,19 @@ export interface TemplateFilters {
   persona?: Persona
 }
 
+/**
+ * The backend `/templates` endpoint returns a paginated `{ data, meta }`
+ * envelope (see TemplatesService.findAll). Unwrap it here so consumers
+ * receive a plain `Template[]`.
+ */
+type BackendListResponse = {
+  data: Template[]
+  meta: { total: number; page: number; limit: number; totalPages: number }
+}
+
 export async function getTemplates(filters?: TemplateFilters): Promise<Template[]> {
-  const { data } = await api.get<Template[]>('/templates', { params: filters })
-  return data
+  const { data } = await api.get<BackendListResponse>('/templates', { params: filters })
+  return data.data
 }
 
 export async function getTemplate(id: string): Promise<Template> {

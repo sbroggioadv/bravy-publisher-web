@@ -100,6 +100,22 @@ const routes: MockRoute[] = [
     },
   },
   {
+    match: (m, u) => m === 'post' && u.includes('/generation/suggest-theme'),
+    handle: async () => {
+      await delay(1200)
+      return {
+        data: {
+          ideas: [
+            'Recuperacao tributaria lendo 5 anos de SPED com Claude Code em vez de 3 dias no Excel',
+            'Conciliacao bancaria automatica do mes inteiro com Claude Code conferindo OFX e extrato',
+            'Apuracao do Simples Nacional revisada por IA antes de transmitir pra evitar multa',
+          ],
+        },
+        status: 200,
+      }
+    },
+  },
+  {
     match: (m, u) => m === 'post' && u.includes('/generation/generate'),
     handle: async () => {
       await delay(3000)

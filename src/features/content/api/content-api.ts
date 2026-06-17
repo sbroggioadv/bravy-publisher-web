@@ -4,9 +4,33 @@ import type { PaginatedResponse } from '@/types/api'
 import type { ContentFilterParams } from '../types/content-filters'
 import { mapApiContent } from '../lib/content-mapper'
 
+/**
+ * The backend `/contents` endpoint runs a strict ValidationPipe
+ * (`forbidNonWhitelisted: true`) and accepts only `page`, `limit`, `status`,
+ * `contentType`, `persona`, `pattern` and `search`. Any extra query key
+ * (e.g. the UI's `pageSize`/`platform`) makes it reject the request with a
+ * 400, which silently empties the listing. Translate the UI filter shape into
+ * that contract here, forwarding only supported keys, and normalize the
+ * `{ data, meta }` response back into the frontend `PaginatedResponse` shape.
+ */
+type BackendListResponse = {
+  data: Content[]
+  meta: { total: number; page: number; limit: number; totalPages: number }
+}
+
 export async function getContents(params: ContentFilterParams): Promise<PaginatedResponse<Content>> {
-  const { data } = await api.get<PaginatedResponse<Content>>('/contents', { params })
-  return { ...data, data: data.data.map(mapApiContent) }
+  const { pageSize, platform, ...rest } = params
+  const query: Record<string, unknown> = { ...rest }
+  if (pageSize !== undefined) query.limit = pageSize
+
+  const { data } = await api.get<BackendListResponse>('/contents', { params: query })
+  return {
+    data: data.data.map(mapApiContent),
+    total: data.meta.total,
+    page: data.meta.page,
+    pageSize: data.meta.limit,
+    totalPages: data.meta.totalPages,
+  }
 }
 
 export async function getContent(id: string): Promise<Content> {

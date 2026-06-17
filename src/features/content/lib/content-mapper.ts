@@ -13,6 +13,7 @@ type ApiSlide = {
   bodyData?: Record<string, unknown> | null
   imageUrl?: string | null
   imageKey?: string | null
+  sceneOverrides?: Record<string, unknown> | null
   // legacy/already-mapped fields fallback through
   labelTopo?: string
   tag?: string
@@ -48,6 +49,7 @@ export function mapApiSlide(api: ApiSlide): Slide {
     callout: api.callout ?? pick<string>(body, 'callout'),
     imageUrl: api.imageUrl ?? undefined,
     imageKey: api.imageKey ?? undefined,
+    sceneOverrides: api.sceneOverrides ?? undefined,
   }
 }
 
@@ -84,5 +86,7 @@ export function mapApiContent(api: ApiContent): Content {
     ctaSub: api.ctaSub ?? (sd.cta_sub as string) ?? '',
     caption: api.caption ?? '',
     slides,
+    slidesData: (api.slidesData ?? undefined) as Record<string, unknown> | undefined,
+    styleData: ((api as Record<string, unknown>).styleData ?? undefined) as Record<string, unknown> | undefined,
   }
 }

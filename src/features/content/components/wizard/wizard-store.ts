@@ -1,11 +1,26 @@
 import { create } from 'zustand'
 import type { Content, Persona, Pattern } from '@/types/content'
 
+/**
+ * Máquina de estados explícita do wizard (RFC §7):
+ * PERSONA → PATTERN → THEME → GERANDO → STUDIO (editar+caption/cta) → SCHEDULE.
+ * `currentStep` (1..6) é mantido p/ o stepper; `phase` é a fase nomeada.
+ */
+export const WIZARD_PHASES = ['persona', 'pattern', 'theme', 'generating', 'studio', 'schedule'] as const
+export type WizardPhase = (typeof WIZARD_PHASES)[number]
+
+export const phaseForStep = (step: number): WizardPhase => WIZARD_PHASES[Math.min(Math.max(step, 1), 6) - 1]!
+
+export type WizardTemplate = 'auto' | 'step' | 'compendium'
+
 interface WizardState {
   currentStep: number
+  phase: WizardPhase
   persona: Persona | null
   pattern: Pattern | null
   theme: string
+  /** família visual: automático (pelo padrão) ou escolha explícita. */
+  template: WizardTemplate
   generatedContent: Content | null
   selectedAccountIds: string[]
   scheduledAt: string | null
@@ -13,6 +28,7 @@ interface WizardState {
   setPersona: (persona: Persona) => void
   setPattern: (pattern: Pattern) => void
   setTheme: (theme: string) => void
+  setTemplate: (template: WizardTemplate) => void
   setGeneratedContent: (content: Content | null) => void
   setAccounts: (ids: string[]) => void
   setSchedule: (date: string | null) => void
@@ -22,11 +38,18 @@ interface WizardState {
   reset: () => void
 }
 
+const stepState = (step: number) => {
+  const s = Math.min(Math.max(step, 1), 6)
+  return { currentStep: s, phase: phaseForStep(s) }
+}
+
 export const useWizardStore = create<WizardState>((set) => ({
   currentStep: 1,
+  phase: 'persona',
   persona: null,
   pattern: null,
   theme: '',
+  template: 'auto',
   generatedContent: null,
   selectedAccountIds: [],
   scheduledAt: null,
@@ -34,19 +57,20 @@ export const useWizardStore = create<WizardState>((set) => ({
   setPersona: (persona) => set({ persona }),
   setPattern: (pattern) => set({ pattern }),
   setTheme: (theme) => set({ theme }),
+  setTemplate: (template) => set({ template }),
   setGeneratedContent: (content) => set({ generatedContent: content }),
   setAccounts: (ids) => set({ selectedAccountIds: ids }),
   setSchedule: (date) => set({ scheduledAt: date }),
-  nextStep: () => set((s) => ({ currentStep: Math.min(s.currentStep + 1, 6) })),
-  prevStep: () => set((s) => ({ currentStep: Math.max(s.currentStep - 1, 1) })),
-  goToStep: (step) =>
-    set(() => ({ currentStep: Math.min(Math.max(step, 1), 6) })),
+  nextStep: () => set((s) => stepState(s.currentStep + 1)),
+  prevStep: () => set((s) => stepState(s.currentStep - 1)),
+  goToStep: (step) => set(() => stepState(step)),
   reset: () =>
     set({
-      currentStep: 1,
+      ...stepState(1),
       persona: null,
       pattern: null,
       theme: '',
+      template: 'auto',
       generatedContent: null,
       selectedAccountIds: [],
       scheduledAt: null,

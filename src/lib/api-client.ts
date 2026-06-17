@@ -25,9 +25,10 @@ api.interceptors.response.use(
     const originalRequest = error.config
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
+      // sem sessão nenhuma (ex.: páginas públicas/demo) → só rejeita, não redireciona
+      const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null
+      if (!refreshToken) return Promise.reject(error)
       try {
-        const refreshToken = localStorage.getItem('refresh_token')
-        if (!refreshToken) throw new Error('No refresh token')
         const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken })
         localStorage.setItem('access_token', data.accessToken)
         localStorage.setItem('refresh_token', data.refreshToken)

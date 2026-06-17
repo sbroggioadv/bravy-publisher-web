@@ -26,6 +26,8 @@ export interface Slide {
   callout?: string
   imageUrl?: string
   imageKey?: string
+  /** Deltas do editor de cena (scene-engine OverrideMap), por nodeId. */
+  sceneOverrides?: Record<string, unknown>
 }
 
 export interface PublishTarget {
@@ -84,6 +86,10 @@ export interface Content {
   publishTargets: PublishTarget[]
   renderJob?: RenderJob
   generation?: Generation
+  /** CarouselInput cru (snake_case) da geração — fonte de verdade do texto p/ o estúdio. */
+  slidesData?: Record<string, unknown>
+  /** estilo aplicado ao post (snapshot: typography/palette/template). */
+  styleData?: Record<string, unknown>
 }
 
 export interface CreateContentInput {

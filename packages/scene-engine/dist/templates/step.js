@@ -70,6 +70,8 @@ function topbar(nodes, ctx, prefix, stepLabel, pageNo, color, accentColor) {
     const baseY = PADY + 20;
     const labelStyle = st(tokens, 'display', 600, 18, accentColor, { ls: 0.16 });
     nodes.push({ type: 'glyphrun', id: nid(prefix, 'topbar.step'), z: 10, x: CX, baselineY: baseY, text: stepLabel.toUpperCase(), style: labelStyle });
+    if (ctx.settings?.showCounter === false)
+        return;
     const pageStyle = st(tokens, 'mono', 600, 16, color, { ls: 0.06 });
     const pw = metrics.measure(pageNo, pageStyle).width;
     nodes.push({ type: 'glyphrun', id: nid(prefix, 'topbar.page'), z: 10, x: W - PADX - pw, baselineY: baseY, text: pageNo, style: pageStyle });

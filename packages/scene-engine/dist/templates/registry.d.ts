@@ -1,4 +1,4 @@
-import type { ContentText, TemplateFamily } from '../doc.js';
+import type { ContentText, DocSettings, TemplateFamily } from '../doc.js';
 import type { SceneNode } from '../scene.js';
 import type { SlideRole } from '../ids.js';
 import type { MetricsProvider } from '../text/metrics.js';
@@ -11,6 +11,8 @@ export interface BuildCtx {
         family?: string;
         weight?: number;
     } | undefined;
+    /** configurações globais do post (contador etc.). */
+    settings?: DocSettings;
 }
 export interface RawSlide {
     role: SlideRole;

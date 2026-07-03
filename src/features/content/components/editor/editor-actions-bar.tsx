@@ -3,16 +3,14 @@
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { EditorStatusBar } from './editor-status-bar'
-import { Save, Image, CalendarClock, Send, Loader2 } from 'lucide-react'
+import { Save, CalendarClock, Send } from 'lucide-react'
 import type { ContentStatus } from '@/types/content'
 
 interface EditorActionsBarProps {
   status: ContentStatus
   lastSavedAt: string | null
   isSaving: boolean
-  isRendering?: boolean
   onSaveDraft: () => void
-  onRender: () => void
   onSchedule: () => void
   onPublish: () => void
 }
@@ -21,9 +19,7 @@ export function EditorActionsBar({
   status,
   lastSavedAt,
   isSaving,
-  isRendering = false,
   onSaveDraft,
-  onRender,
   onSchedule,
   onPublish,
 }: EditorActionsBarProps) {
@@ -39,14 +35,6 @@ export function EditorActionsBar({
           <Button variant="default" size="sm" onClick={onSaveDraft} disabled={isSaving}>
             <Save className="size-3.5" data-icon="inline-start" />
             Salvar rascunho
-          </Button>
-          <Button variant="secondary" size="sm" onClick={onRender} disabled={isRendering}>
-            {isRendering ? (
-              <Loader2 className="size-3.5 animate-spin" data-icon="inline-start" />
-            ) : (
-              <Image className="size-3.5" data-icon="inline-start" />
-            )}
-            Renderizar PNGs
           </Button>
           <Separator orientation="vertical" className="h-5" />
           <Button variant="outline" size="sm" onClick={onSchedule}>

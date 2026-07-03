@@ -58,6 +58,8 @@ function centerGlyph(nodes, id, text, style, cx, baselineY, metrics, z, opacity)
     nodes.push({ type: 'glyphrun', id, z, x: cx - m.width / 2, baselineY, text, style, ...(opacity != null ? { opacity } : {}) });
 }
 function pageNo(nodes, ctx, prefix, page, total) {
+    if (ctx.settings?.showCounter === false)
+        return;
     const style = st(ctx.tokens, 'mono', 500, 15, 'muted', { ls: 0.12 });
     const txt = `${String(page).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
     const w = ctx.metrics.measure(txt, style).width;

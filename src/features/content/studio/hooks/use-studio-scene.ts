@@ -136,7 +136,7 @@ export function useStudioScene(content: Content): StudioScene {
             },
           }
         : safeKit
-    return resolveScene({ ...baseDoc, layout: style?.layout, overrides: safeOverrides, added: safeAdded }, metrics, sceneKit)
+    return resolveScene({ ...baseDoc, layout: style?.layout, settings: style?.settings, overrides: safeOverrides, added: safeAdded }, metrics, sceneKit)
   }, [metrics, baseDoc, overrides, added, kit, style, igAccount])
 
   return { scene, metrics, brandKit: kit, ready: !!scene, fontError }

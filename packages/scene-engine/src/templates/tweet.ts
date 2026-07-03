@@ -1,13 +1,16 @@
 /**
  * Template "tweet" — carrossel em estilo card de tweet (X/Twitter).
  * Cada slide é um card: header (avatar + nome + @handle + contador) → texto
- * curto (lead bold + parágrafos, ênfase itálica) → faixa de imagem opcional
- * embaixo. Tema dark/light vem da paleta do kit/estilo (sem hex literal).
+ * curto (lead bold + parágrafos, ênfase itálica) → faixa de imagem embaixo
+ * SÓ quando o slide tem asset (sem imagem, o texto ganha a altura toda).
+ * Texto contido em [top,bottom]: parágrafo que não cabe encolhe/elipsa e os
+ * seguintes são descartados — nunca transborda sobre a faixa de imagem.
+ * Tema dark/light vem da paleta do kit/estilo (sem hex literal).
  * Emite SceneNode[] no design space 1080². Cover / body / CTA = cards de tweet.
  */
 import type { ContentText, SlideText } from '../doc.js';
 import { nid, slidePrefix } from '../ids.js';
-import type { EllipseNode, GlyphRunNode, ImageNode, RectNode, ResolvedTextStyle, SceneNode } from '../scene.js';
+import type { EllipseNode, GlyphRunNode, ImageNode, ResolvedTextStyle, SceneNode } from '../scene.js';
 import { headlineRuns, parseInline, type StyleKey, type StyledRun } from '../text/runs.js';
 import { fitBlock, layoutBlock, type BlockSpec, type LaidBlock } from '../text/layout.js';
 import type { Tokens, RoleName, ColorToken } from '../tokens.js';
@@ -37,10 +40,6 @@ function st(tokens: Tokens, role: RoleName, weight: number, size: number, fill: 
     letterSpacingEm: o.ls ?? 0,
     lineHeight: o.lh ?? 1.2,
   };
-}
-
-function rect(id: string, x: number, y: number, w: number, h: number, fill: string, opts: Partial<RectNode> = {}): RectNode {
-  return { type: 'rect', id, z: opts.z ?? 1, frame: { x, y, w, h }, fill, ...opts };
 }
 
 function spec(runs: StyledRun[], width: number, styleOf: (k: StyleKey) => ResolvedTextStyle, align?: BlockSpec['align']): BlockSpec {
@@ -89,13 +88,14 @@ function atHandle(handle: string): string {
 }
 
 // ---- estilos de texto do card ----
-function leadStyleOf(tokens: Tokens, size: number): (k: StyleKey) => ResolvedTextStyle {
+function leadStyleOf(tokens: Tokens, size: number, lh = 1.24): (k: StyleKey) => ResolvedTextStyle {
   return (k) => {
     switch (k) {
-      case 'em': return st(tokens, 'accent', 400, size, 'accent', { italic: true, lh: 1.24 });
+      case 'strong': return st(tokens, 'display', 700, size, 'accent', { ls: -0.01, lh });
+      case 'em': return st(tokens, 'accent', 400, size, 'accent', { italic: true, lh });
       case 'code':
-      case 'keyword': return st(tokens, 'mono', 500, size * 0.9, 'accent', { lh: 1.24 });
-      default: return st(tokens, 'display', 700, size, 'ink', { ls: -0.01, lh: 1.24 });
+      case 'keyword': return st(tokens, 'mono', 500, size * 0.9, 'accent', { lh });
+      default: return st(tokens, 'display', 700, size, 'ink', { ls: -0.01, lh });
     }
   };
 }
@@ -139,28 +139,46 @@ function header(nodes: SceneNode[], ctx: BuildCtx, prefix: string, page: number,
   nodes.push({ type: 'glyphrun', id: nid(prefix, 'handle'), z: 10, x: tx, baselineY: nameBaseline + 42, text: atHandle(tokens.brand.handle), style: handleStyle });
 
   // contador 1/8 no topo-direita, alinhado ao nome
-  const countStyle = st(tokens, 'mono', 600, 32, 'accent', { ls: 0.02 });
-  const counter = `${page}/${total}`;
-  const cw = metrics.measure(counter, countStyle).width;
-  nodes.push({ type: 'glyphrun', id: nid(prefix, 'counter'), z: 10, x: W - PAD - cw, baselineY: nameBaseline, text: counter, style: countStyle });
+  if (ctx.settings?.showCounter !== false) {
+    const countStyle = st(tokens, 'mono', 600, 32, 'accent', { ls: 0.02 });
+    const counter = `${page}/${total}`;
+    const cw = metrics.measure(counter, countStyle).width;
+    nodes.push({ type: 'glyphrun', id: nid(prefix, 'counter'), z: 10, x: W - PAD - cw, baselineY: nameBaseline, text: counter, style: countStyle });
+  }
 
   return ay + AVATAR; // bottom do header
 }
 
-/** Faixa de imagem arredondada na base; usa o asset se houver, senão placeholder sutil. */
-function imageBand(nodes: SceneNode[], ctx: BuildCtx, prefix: string, src?: string): number {
-  const { tokens } = ctx;
+/** Faixa de imagem arredondada na base do card (só existe quando o slide tem asset). */
+function imageBand(nodes: SceneNode[], prefix: string, src: string): number {
   const h = 392;
   const y = H - PAD - h;
-  if (src) {
-    nodes.push({ type: 'image', id: nid(prefix, 'image'), z: 4, frame: { x: CX, y, w: CW, h }, src, fit: 'cover', radius: 24 } satisfies ImageNode);
-  } else {
-    nodes.push(rect(nid(prefix, 'image.placeholder'), CX, y, CW, h, tokens.color('bg2'), { z: 4, radius: 24, stroke: tokens.color('line'), strokeWidth: 1 }));
-  }
+  nodes.push({ type: 'image', id: nid(prefix, 'image'), z: 4, frame: { x: CX, y, w: CW, h }, src, fit: 'cover', radius: 24 } satisfies ImageNode);
   return y; // topo da faixa
 }
 
-/** Empilha lead + parágrafos a partir de `top`, limitado por `bottom`. */
+const LEAD_GAP = 34;
+const PARA_GAP = 22;
+const BODY_SIZE = 40;
+
+interface TextBlockOpts {
+  /** tamanho base do lead (capa maior que body/CTA). */
+  leadSize: number;
+  /** teto de altura do lead antes do shrink-to-fit. */
+  leadMaxH: number;
+  /** escala mínima do shrink do lead. */
+  leadFloor: number;
+  leadLh?: number;
+  /** cover/CTA centralizam o bloco em [top,bottom]; body ancora no topo. */
+  valign: 'top' | 'center';
+}
+
+/**
+ * Empilha lead + parágrafos CONTIDOS em [top, bottom]. Duas passadas:
+ * mede tudo (parágrafo que estoura o espaço restante é encolhido/elipsado
+ * via fitBlock; os seguintes são descartados), depois emite com o offset
+ * de alinhamento vertical.
+ */
 function textBlock(
   nodes: SceneNode[],
   ctx: BuildCtx,
@@ -168,19 +186,37 @@ function textBlock(
   leadRuns: StyledRun[],
   paragraphs: StyledRun[][],
   top: number,
+  bottom: number,
+  opts: TextBlockOpts,
 ): void {
   const { metrics } = ctx;
-  let cursor = top;
+  const avail = bottom - top;
+  const placed: Array<{ path: string; block: LaidBlock; y: number }> = [];
+  let cursor = 0;
+
   if (leadRuns.some((r) => r.text.trim())) {
-    const lb = fitBlock(spec(leadRuns, CW, typed(ctx, nid(prefix, 'lead'), leadStyleOf(ctx.tokens, 50))), metrics, 360, 0.8);
-    cursor += pushBlock(nodes, prefix, 'lead', lb, CX, cursor, 10) + 34;
+    const styleOf = typed(ctx, nid(prefix, 'lead'), leadStyleOf(ctx.tokens, opts.leadSize, opts.leadLh));
+    const lb = fitBlock(spec(leadRuns, CW, styleOf), metrics, Math.min(opts.leadMaxH, avail), opts.leadFloor);
+    placed.push({ path: 'lead', block: lb, y: cursor });
+    cursor += lb.height;
   }
-  const styleOf = bodyStyleOf(ctx.tokens, 40);
+
+  const minParaH = BODY_SIZE * 1.38; // ~1 linha de corpo: menos que isso, descarta
+  const styleOf = bodyStyleOf(ctx.tokens, BODY_SIZE);
   paragraphs.forEach((runs, i) => {
     if (!runs.some((r) => r.text.trim())) return;
-    const b = layoutBlock(spec(runs, CW, typed(ctx, nid(prefix, `para[${i}]`), styleOf)), metrics);
-    cursor += pushBlock(nodes, prefix, `para[${i}]`, b, CX, cursor, 10) + 22;
+    const gap = placed.length === 0 ? 0 : placed[placed.length - 1]!.path === 'lead' ? LEAD_GAP : PARA_GAP;
+    const remaining = avail - cursor - gap;
+    if (remaining < minParaH) return;
+    const sp = spec(runs, CW, typed(ctx, nid(prefix, `para[${i}]`), styleOf));
+    let b = layoutBlock(sp, metrics);
+    if (b.height > remaining) b = fitBlock(sp, metrics, remaining, 0.85);
+    placed.push({ path: `para[${i}]`, block: b, y: cursor + gap });
+    cursor += gap + b.height;
   });
+
+  const base = top + (opts.valign === 'center' ? Math.max(0, (avail - cursor) / 2) : 0);
+  for (const p of placed) pushBlock(nodes, prefix, p.path, p.block, CX, base + p.y, 10);
 }
 
 /** Converte o corpo do slide (list/paragraphs/stats/cards) em parágrafos de tweet. */
@@ -202,7 +238,9 @@ function buildCover(content: ContentText, total: number, ctx: BuildCtx): RawSlid
   const lead = parseInline(content.hookCapa);
   const paras: StyledRun[][] = [];
   if (content.labelCapa) paras.push(parseInline(content.labelCapa));
-  textBlock(nodes, ctx, prefix, lead, paras, headerBottom + 56);
+  textBlock(nodes, ctx, prefix, lead, paras, headerBottom + 56, H - PAD, {
+    leadSize: 72, leadMaxH: 560, leadFloor: 0.7, leadLh: 1.16, valign: 'center',
+  });
 
   return { role: 'cover', sourceIndex: 0, background: tokens.color('bg'), nodes };
 }
@@ -214,15 +252,19 @@ function buildBody(slide: SlideText, sourceIndex: number, page: number, total: n
   const nodes: SceneNode[] = [];
   const headerBottom = header(nodes, ctx, prefix, page, total);
 
+  // com imagem, o texto para 44px acima da faixa; sem imagem, usa a altura toda
   const src = slide.image?.assetUrl;
-  imageBand(nodes, ctx, prefix, src);
+  const bandTop = src ? imageBand(nodes, prefix, src) : undefined;
+  const bottom = bandTop !== undefined ? bandTop - 44 : H - PAD;
 
   const lead = slide.headlineTop || slide.headlineEm || slide.headlineBottom
     ? headlineRuns(slide.headlineTop, slide.headlineEm, slide.headlineBottom)
     : slide.tag
       ? parseInline(slide.tag)
       : [];
-  textBlock(nodes, ctx, prefix, lead, paragraphsFrom(slide), headerBottom + 56);
+  textBlock(nodes, ctx, prefix, lead, paragraphsFrom(slide), headerBottom + 56, bottom, {
+    leadSize: 50, leadMaxH: 240, leadFloor: 0.8, valign: 'top',
+  });
 
   return { role: 'body', sourceIndex, background: tokens.color('bg'), nodes };
 }
@@ -237,7 +279,9 @@ function buildCta(content: ContentText, total: number, ctx: BuildCtx): RawSlide 
   const lead = parseInline(content.ctaText || '');
   const paras: StyledRun[][] = [];
   if (content.ctaSub) paras.push(parseInline(content.ctaSub));
-  textBlock(nodes, ctx, prefix, lead, paras, headerBottom + 56);
+  textBlock(nodes, ctx, prefix, lead, paras, headerBottom + 56, H - PAD, {
+    leadSize: 56, leadMaxH: 360, leadFloor: 0.75, valign: 'center',
+  });
 
   return { role: 'cta', sourceIndex: 0, background: tokens.color('bg'), nodes };
 }

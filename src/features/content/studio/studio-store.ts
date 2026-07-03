@@ -52,6 +52,8 @@ interface StudioState {
   init: (overrides: OverridesByIndex, draft: RawCarousel, added: AddedByIndex, groups: GroupsByIndex, style?: StyleData | null) => void
   /** aplica um estilo ao post inteiro (tipografia/paleta/template). */
   setStyle: (style: StyleData | null) => void
+  /** configurações globais do post (ex.: contador) — vivem em style.settings. */
+  setSettings: (patch: NonNullable<StyleData['settings']>) => void
   markStyleClean: () => void
   setActive: (index: number) => void
   select: (id: string | null, additive?: boolean) => void
@@ -326,6 +328,14 @@ export const useStudioStore = create<StudioState>((set) => ({
       styleDirty: true,
       textDirty: true,
     })),
+  setSettings: (patch) =>
+    set((s) => {
+      // sem estilo aplicado, cria um StyleData mínimo (kit do tenant permanece:
+      // tipografia/paleta/brand ficam undefined → fallback no use-studio-scene)
+      const base: StyleData = s.style ?? { name: 'Personalizado', template: s.draft?.template ?? 'step' }
+      const style: StyleData = { ...base, settings: { ...base.settings, ...patch } }
+      return { style: clone(style), past: [...s.past, snap(s)], future: [], styleDirty: true }
+    }),
   markStyleClean: () => set({ styleDirty: false }),
   markTextClean: () => set({ textDirty: false }),
 }))

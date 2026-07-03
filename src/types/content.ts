@@ -45,14 +45,6 @@ export interface PublishTarget {
   lastError?: string
 }
 
-export interface RenderJob {
-  id: string
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
-  bullJobId?: string
-  progress?: number
-  attempts: number
-}
-
 export interface Generation {
   id: string
   prompt: string
@@ -88,7 +80,6 @@ export interface Content {
   authorId: string
   templateId?: string
   publishTargets: PublishTarget[]
-  renderJob?: RenderJob
   generation?: Generation
   /** CarouselInput cru (snake_case) da geração — fonte de verdade do texto p/ o estúdio. */
   slidesData?: Record<string, unknown>

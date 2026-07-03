@@ -185,6 +185,12 @@ export interface TypographyOverride {
   body?: { family: string; weights: number[]; style: 'normal' | 'italic' };
 }
 
+/** Configurações GLOBAIS do post/carrossel (valem pra todos os slides). */
+export interface DocSettings {
+  /** contador de páginas dos templates de sistema ("02 / 07", "1/6"); default true. */
+  showCounter?: boolean;
+}
+
 export interface DesignDocument {
   schemaVersion: number;
   content: ContentText;
@@ -197,6 +203,8 @@ export interface DesignDocument {
   typographyOverride?: Partial<Record<RoleName, TypographyOverride['display']>>;
   /** layout do template custom (quando content.template === 'custom'). */
   layout?: LayoutSpec;
+  /** configurações globais do post (ex.: esconder contador de páginas). */
+  settings?: DocSettings;
 }
 
 export const CURRENT_SCHEMA_VERSION = 1;

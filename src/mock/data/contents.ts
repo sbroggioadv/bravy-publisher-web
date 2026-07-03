@@ -75,7 +75,6 @@ export const mockContents: Content[] = [
     publishTargets: [
       { id: 'pt_01', socialAccountId: 'sa_01', publishedAt: '2026-05-02T20:55:00Z', externalMediaId: '18454368775114403', status: 'COMPLETED', attempts: 1 },
     ],
-    renderJob: { id: 'rj_01', status: 'COMPLETED', progress: 100, attempts: 1 },
     generation: { id: 'gen_01', prompt: 'Gere carrossel sobre recuperacao tributaria...', response: {}, model: 'claude-sonnet-4-20250514', inputTokens: 4200, outputTokens: 1800, durationMs: 8500, createdAt: '2026-05-01T14:00:00Z' },
   },
   {
@@ -103,7 +102,6 @@ export const mockContents: Content[] = [
     publishTargets: [
       { id: 'pt_02', socialAccountId: 'sa_01', publishedAt: '2026-05-04T20:00:00Z', externalMediaId: '18454368775114404', status: 'COMPLETED', attempts: 1 },
     ],
-    renderJob: { id: 'rj_02', status: 'COMPLETED', progress: 100, attempts: 1 },
   },
   {
     id: 'cnt_03',
@@ -315,7 +313,6 @@ export const mockContents: Content[] = [
     publishTargets: [
       { id: 'pt_11', socialAccountId: 'sa_01', status: 'FAILED', attempts: 3, lastError: 'Graph API: Invalid media container' },
     ],
-    renderJob: { id: 'rj_11', status: 'FAILED', attempts: 3 },
   },
   {
     id: 'cnt_12',
@@ -340,6 +337,5 @@ export const mockContents: Content[] = [
     publishTargets: [
       { id: 'pt_12', socialAccountId: 'sa_01', status: 'PROCESSING', attempts: 1 },
     ],
-    renderJob: { id: 'rj_12', status: 'COMPLETED', progress: 100, attempts: 1 },
   },
 ]

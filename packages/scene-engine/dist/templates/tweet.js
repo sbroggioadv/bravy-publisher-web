@@ -19,9 +19,6 @@ function st(tokens, role, weight, size, fill, o = {}) {
         lineHeight: o.lh ?? 1.2,
     };
 }
-function rect(id, x, y, w, h, fill, opts = {}) {
-    return { type: 'rect', id, z: opts.z ?? 1, frame: { x, y, w, h }, fill, ...opts };
-}
 function spec(runs, width, styleOf, align) {
     return { runs, width, styleOf, align };
 }
@@ -65,13 +62,14 @@ function atHandle(handle) {
     return `@${h.toLowerCase()}`;
 }
 // ---- estilos de texto do card ----
-function leadStyleOf(tokens, size) {
+function leadStyleOf(tokens, size, lh = 1.24) {
     return (k) => {
         switch (k) {
-            case 'em': return st(tokens, 'accent', 400, size, 'accent', { italic: true, lh: 1.24 });
+            case 'strong': return st(tokens, 'display', 700, size, 'accent', { ls: -0.01, lh });
+            case 'em': return st(tokens, 'accent', 400, size, 'accent', { italic: true, lh });
             case 'code':
-            case 'keyword': return st(tokens, 'mono', 500, size * 0.9, 'accent', { lh: 1.24 });
-            default: return st(tokens, 'display', 700, size, 'ink', { ls: -0.01, lh: 1.24 });
+            case 'keyword': return st(tokens, 'mono', 500, size * 0.9, 'accent', { lh });
+            default: return st(tokens, 'display', 700, size, 'ink', { ls: -0.01, lh });
         }
     };
 }
@@ -111,40 +109,60 @@ function header(nodes, ctx, prefix, page, total) {
     const handleStyle = st(tokens, 'body', 400, 30, 'muted');
     nodes.push({ type: 'glyphrun', id: nid(prefix, 'handle'), z: 10, x: tx, baselineY: nameBaseline + 42, text: atHandle(tokens.brand.handle), style: handleStyle });
     // contador 1/8 no topo-direita, alinhado ao nome
-    const countStyle = st(tokens, 'mono', 600, 32, 'accent', { ls: 0.02 });
-    const counter = `${page}/${total}`;
-    const cw = metrics.measure(counter, countStyle).width;
-    nodes.push({ type: 'glyphrun', id: nid(prefix, 'counter'), z: 10, x: W - PAD - cw, baselineY: nameBaseline, text: counter, style: countStyle });
+    if (ctx.settings?.showCounter !== false) {
+        const countStyle = st(tokens, 'mono', 600, 32, 'accent', { ls: 0.02 });
+        const counter = `${page}/${total}`;
+        const cw = metrics.measure(counter, countStyle).width;
+        nodes.push({ type: 'glyphrun', id: nid(prefix, 'counter'), z: 10, x: W - PAD - cw, baselineY: nameBaseline, text: counter, style: countStyle });
+    }
     return ay + AVATAR; // bottom do header
 }
-/** Faixa de imagem arredondada na base; usa o asset se houver, senão placeholder sutil. */
-function imageBand(nodes, ctx, prefix, src) {
-    const { tokens } = ctx;
+/** Faixa de imagem arredondada na base do card (só existe quando o slide tem asset). */
+function imageBand(nodes, prefix, src) {
     const h = 392;
     const y = H - PAD - h;
-    if (src) {
-        nodes.push({ type: 'image', id: nid(prefix, 'image'), z: 4, frame: { x: CX, y, w: CW, h }, src, fit: 'cover', radius: 24 });
-    }
-    else {
-        nodes.push(rect(nid(prefix, 'image.placeholder'), CX, y, CW, h, tokens.color('bg2'), { z: 4, radius: 24, stroke: tokens.color('line'), strokeWidth: 1 }));
-    }
+    nodes.push({ type: 'image', id: nid(prefix, 'image'), z: 4, frame: { x: CX, y, w: CW, h }, src, fit: 'cover', radius: 24 });
     return y; // topo da faixa
 }
-/** Empilha lead + parágrafos a partir de `top`, limitado por `bottom`. */
-function textBlock(nodes, ctx, prefix, leadRuns, paragraphs, top) {
+const LEAD_GAP = 34;
+const PARA_GAP = 22;
+const BODY_SIZE = 40;
+/**
+ * Empilha lead + parágrafos CONTIDOS em [top, bottom]. Duas passadas:
+ * mede tudo (parágrafo que estoura o espaço restante é encolhido/elipsado
+ * via fitBlock; os seguintes são descartados), depois emite com o offset
+ * de alinhamento vertical.
+ */
+function textBlock(nodes, ctx, prefix, leadRuns, paragraphs, top, bottom, opts) {
     const { metrics } = ctx;
-    let cursor = top;
+    const avail = bottom - top;
+    const placed = [];
+    let cursor = 0;
     if (leadRuns.some((r) => r.text.trim())) {
-        const lb = fitBlock(spec(leadRuns, CW, typed(ctx, nid(prefix, 'lead'), leadStyleOf(ctx.tokens, 50))), metrics, 360, 0.8);
-        cursor += pushBlock(nodes, prefix, 'lead', lb, CX, cursor, 10) + 34;
+        const styleOf = typed(ctx, nid(prefix, 'lead'), leadStyleOf(ctx.tokens, opts.leadSize, opts.leadLh));
+        const lb = fitBlock(spec(leadRuns, CW, styleOf), metrics, Math.min(opts.leadMaxH, avail), opts.leadFloor);
+        placed.push({ path: 'lead', block: lb, y: cursor });
+        cursor += lb.height;
     }
-    const styleOf = bodyStyleOf(ctx.tokens, 40);
+    const minParaH = BODY_SIZE * 1.38; // ~1 linha de corpo: menos que isso, descarta
+    const styleOf = bodyStyleOf(ctx.tokens, BODY_SIZE);
     paragraphs.forEach((runs, i) => {
         if (!runs.some((r) => r.text.trim()))
             return;
-        const b = layoutBlock(spec(runs, CW, typed(ctx, nid(prefix, `para[${i}]`), styleOf)), metrics);
-        cursor += pushBlock(nodes, prefix, `para[${i}]`, b, CX, cursor, 10) + 22;
+        const gap = placed.length === 0 ? 0 : placed[placed.length - 1].path === 'lead' ? LEAD_GAP : PARA_GAP;
+        const remaining = avail - cursor - gap;
+        if (remaining < minParaH)
+            return;
+        const sp = spec(runs, CW, typed(ctx, nid(prefix, `para[${i}]`), styleOf));
+        let b = layoutBlock(sp, metrics);
+        if (b.height > remaining)
+            b = fitBlock(sp, metrics, remaining, 0.85);
+        placed.push({ path: `para[${i}]`, block: b, y: cursor + gap });
+        cursor += gap + b.height;
     });
+    const base = top + (opts.valign === 'center' ? Math.max(0, (avail - cursor) / 2) : 0);
+    for (const p of placed)
+        pushBlock(nodes, prefix, p.path, p.block, CX, base + p.y, 10);
 }
 /** Converte o corpo do slide (list/paragraphs/stats/cards) em parágrafos de tweet. */
 function paragraphsFrom(slide) {
@@ -168,7 +186,9 @@ function buildCover(content, total, ctx) {
     const paras = [];
     if (content.labelCapa)
         paras.push(parseInline(content.labelCapa));
-    textBlock(nodes, ctx, prefix, lead, paras, headerBottom + 56);
+    textBlock(nodes, ctx, prefix, lead, paras, headerBottom + 56, H - PAD, {
+        leadSize: 72, leadMaxH: 560, leadFloor: 0.7, leadLh: 1.16, valign: 'center',
+    });
     return { role: 'cover', sourceIndex: 0, background: tokens.color('bg'), nodes };
 }
 // ---------------- BODY ----------------
@@ -177,14 +197,18 @@ function buildBody(slide, sourceIndex, page, total, ctx) {
     const prefix = slidePrefix('body', sourceIndex);
     const nodes = [];
     const headerBottom = header(nodes, ctx, prefix, page, total);
+    // com imagem, o texto para 44px acima da faixa; sem imagem, usa a altura toda
     const src = slide.image?.assetUrl;
-    imageBand(nodes, ctx, prefix, src);
+    const bandTop = src ? imageBand(nodes, prefix, src) : undefined;
+    const bottom = bandTop !== undefined ? bandTop - 44 : H - PAD;
     const lead = slide.headlineTop || slide.headlineEm || slide.headlineBottom
         ? headlineRuns(slide.headlineTop, slide.headlineEm, slide.headlineBottom)
         : slide.tag
             ? parseInline(slide.tag)
             : [];
-    textBlock(nodes, ctx, prefix, lead, paragraphsFrom(slide), headerBottom + 56);
+    textBlock(nodes, ctx, prefix, lead, paragraphsFrom(slide), headerBottom + 56, bottom, {
+        leadSize: 50, leadMaxH: 240, leadFloor: 0.8, valign: 'top',
+    });
     return { role: 'body', sourceIndex, background: tokens.color('bg'), nodes };
 }
 // ---------------- CTA ----------------
@@ -197,7 +221,9 @@ function buildCta(content, total, ctx) {
     const paras = [];
     if (content.ctaSub)
         paras.push(parseInline(content.ctaSub));
-    textBlock(nodes, ctx, prefix, lead, paras, headerBottom + 56);
+    textBlock(nodes, ctx, prefix, lead, paras, headerBottom + 56, H - PAD, {
+        leadSize: 56, leadMaxH: 360, leadFloor: 0.75, valign: 'center',
+    });
     return { role: 'cta', sourceIndex: 0, background: tokens.color('bg'), nodes };
 }
 export const tweetTemplate = {

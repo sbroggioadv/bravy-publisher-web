@@ -30,3 +30,20 @@ test('override hidden zera a opacidade do nó ancorado', () => {
   assert.ok(underline, 'nó cover/underline deveria existir');
   assert.equal(underline!.opacity, 0);
 });
+
+test('settings.showCounter=false remove o contador de páginas de todos os slides', () => {
+  const isCounter = (id: string) => id.endsWith('topbar.page') || id.endsWith('pageno') || id.endsWith('/counter');
+  for (const template of ['step', 'compendium', 'tweet'] as const) {
+    const base: DesignDocument = { ...EDITORIAL_DOC, content: { ...EDITORIAL_DOC.content, template } };
+    const withCounter = resolveScene(base, metrics, SEED_BRAND_KIT);
+    assert.ok(
+      withCounter.slides.every((s) => s.nodes.some((n) => isCounter(n.id))),
+      `${template}: contador deveria existir por padrão`,
+    );
+    const without = resolveScene({ ...base, settings: { showCounter: false } }, metrics, SEED_BRAND_KIT);
+    assert.ok(
+      without.slides.every((s) => s.nodes.every((n) => !isCounter(n.id))),
+      `${template}: contador deveria sumir com showCounter=false`,
+    );
+  }
+});

@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useDebounce } from '@/hooks/use-debounce'
 import { updateContent } from '../../api/content-api'
-import { triggerRender } from '../../api/render-api'
 import { CoverEditor } from './cover-editor'
 import { SlideEditorCard } from './slide-editor-card'
 import { CtaEditor } from './cta-editor'
@@ -15,7 +14,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { sanitizeInline } from '@/lib/sanitize'
 import { format } from 'date-fns'
-import { toast } from 'sonner'
 import type { Content, Slide } from '@/types/content'
 
 interface EditorSplitLayoutProps {
@@ -47,17 +45,6 @@ export function EditorSplitLayout({ content }: EditorSplitLayoutProps) {
     onSuccess: () => {
       setLastSavedAt(format(new Date(), 'HH:mm'))
       queryClient.invalidateQueries({ queryKey: ['content', content.id] })
-    },
-  })
-
-  const renderMutation = useMutation({
-    mutationFn: () => triggerRender(content.id),
-    onSuccess: () => {
-      toast.success('Renderizacao iniciada')
-      queryClient.invalidateQueries({ queryKey: ['content', content.id] })
-    },
-    onError: (err: Error) => {
-      toast.error(`Falha ao renderizar: ${err.message}`)
     },
   })
 
@@ -107,10 +94,6 @@ export function EditorSplitLayout({ content }: EditorSplitLayoutProps) {
 
   function handleSaveDraft() {
     saveMutation.mutate(formData)
-  }
-
-  function handleRender() {
-    renderMutation.mutate()
   }
 
   function handleSchedule() {
@@ -291,9 +274,7 @@ export function EditorSplitLayout({ content }: EditorSplitLayoutProps) {
         status={content.status}
         lastSavedAt={lastSavedAt}
         isSaving={saveMutation.isPending}
-        isRendering={renderMutation.isPending}
         onSaveDraft={handleSaveDraft}
-        onRender={handleRender}
         onSchedule={handleSchedule}
         onPublish={handlePublish}
       />

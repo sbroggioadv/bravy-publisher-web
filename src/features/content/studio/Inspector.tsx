@@ -46,8 +46,7 @@ export function Inspector({ kit, activeIndex, selectedBox, textPx }: InspectorPr
   if (!selectedBox) {
     return (
       <div className="p-4">
-        <h3 className="text-sm font-semibold">Inspetor</h3>
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Selecione um bloco no slide (shift = vários). Arraste pra mover, cantos redimensionam, duplo-clique edita o texto, Delete remove.
         </p>
       </div>

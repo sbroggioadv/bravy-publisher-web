@@ -11,6 +11,7 @@ import type {
   ContentText,
   DesignDocument,
   OverrideMap,
+  SlideImage,
   SlideText,
   TemplateFamily,
   UserNode,
@@ -18,6 +19,22 @@ import type {
 import { parseScenePayload, type GroupMap } from './scene-payload'
 
 type RawCard = { label?: string; icon?: string; title?: string; body?: string; highlight?: boolean }
+/** Imagem por slide gravada em slidesData (snake_case, espelho do SlideImageInput do backend). */
+export type RawSlideImage = {
+  enabled: boolean
+  role: 'figure' | 'background'
+  prompt: string
+  model: 'nano-banana' | 'gpt-5.5-image'
+  seed?: number
+  focal?: { x: number; y: number }
+  treatment?: 'duotone' | 'grain' | 'none'
+  status: 'idle' | 'queued' | 'generating' | 'ready' | 'failed'
+  asset_url?: string
+  asset_key?: string
+  width?: number
+  height?: number
+  last_error?: string
+}
 type RawSlide = {
   label_topo?: string
   tag?: string
@@ -29,6 +46,9 @@ type RawSlide = {
   stats?: [string, string][]
   cards?: RawCard[]
   callout?: string
+  /** sugestão de imagem emitida pelo LLM (usada como prompt default da geração). */
+  image_prompt?: string
+  image?: RawSlideImage
 }
 export type RawCarousel = {
   slug?: string
@@ -49,6 +69,25 @@ function mapCard(c: RawCard): CardText {
   return { label: c.label, icon: c.icon, title: c.title, body: c.body, highlight: c.highlight }
 }
 
+/** snake_case → camelCase, espelho exato do mapSlideImage do backend (carousel-to-doc.ts). */
+function mapSlideImage(i: RawSlideImage): SlideImage {
+  return {
+    enabled: i.enabled,
+    role: i.role,
+    prompt: i.prompt,
+    model: i.model,
+    seed: i.seed,
+    focal: i.focal,
+    treatment: i.treatment,
+    status: i.status,
+    assetUrl: i.asset_url,
+    assetKey: i.asset_key,
+    width: i.width,
+    height: i.height,
+    lastError: i.last_error,
+  }
+}
+
 function mapSlide(s: RawSlide): SlideText {
   return {
     labelTopo: s.label_topo,
@@ -61,6 +100,7 @@ function mapSlide(s: RawSlide): SlideText {
     stats: s.stats,
     cards: s.cards?.map(mapCard),
     callout: s.callout,
+    image: s.image ? mapSlideImage(s.image) : undefined,
   }
 }
 
@@ -86,7 +126,9 @@ function buildContentText(content: Content): ContentText {
     }
   }
 
-  // fallback: deriva do Content camelCase + slides de corpo (exclui cover/cta por slideType)
+  // fallback: deriva do Content camelCase + slides de corpo (exclui cover/cta por slideType).
+  // Sem `image` aqui: o Slide camelCase não expõe bodyData/image — a imagem por
+  // slide só existe via slidesData (raw), que é o caminho preferido acima.
   const body = content.slides.filter((s) => s.position > 0 && s.position < content.slides.length - 1)
   return {
     slug: content.slug,

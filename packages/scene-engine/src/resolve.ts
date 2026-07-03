@@ -49,7 +49,7 @@ export function resolveScene(doc: DesignDocument, metrics: MetricsProvider, bran
   }
   const typo = typoMap.size ? (id: string) => typoMap.get(id) : undefined;
 
-  const raw = program.build(migrated.content, { tokens, metrics, typo });
+  const raw = program.build(migrated.content, { tokens, metrics, typo, settings: migrated.settings });
 
   const slides: SceneSlide[] = raw.map((rs, index) => ({
     index,

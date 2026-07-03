@@ -74,6 +74,40 @@ const RE = {
   card: /^slide\[(\d+)\]\/card\[(\d+)\]\.(title|body|label)$/,
 }
 
+const TWEET = {
+  lead: /^slide\[(\d+)\]\/lead$/,
+  para: /^slide\[(\d+)\]\/para\[(\d+)\]$/,
+}
+
+/**
+ * Família tweet: containers genéricos (`lead` / `para[k]`) → id canônico com o
+ * MESMO campo de origem, espelhando a derivação do template (lead = headline,
+ * senão tag; parágrafos seguem a prioridade list > paragraphs > stats > cards
+ * de paragraphsFrom). Reusa os mapeamentos canônicos de fieldsFor.
+ */
+function tweetCanonicalId(containerId: string, raw: RawCarousel): string | null {
+  if (containerId === 'cover/lead') return 'cover/hook'
+  if (containerId === 'cover/para[0]') return 'cover/label'
+  if (containerId === 'cta/lead') return 'cta/text'
+  if (containerId === 'cta/para[0]') return 'cta/sub'
+
+  let m: RegExpMatchArray | null
+  if ((m = containerId.match(TWEET.lead))) {
+    const b = Number(m[1])
+    const s = raw.slides?.[b]
+    return s?.headline_top || s?.headline_em || s?.headline_bottom ? `slide[${b}]/headline` : `slide[${b}]/kicker`
+  }
+  if ((m = containerId.match(TWEET.para))) {
+    const b = Number(m[1])
+    const k = Number(m[2])
+    const s = raw.slides?.[b]
+    if (s?.list || s?.paragraphs) return `slide[${b}]/body.bullet[${k}]`
+    if (s?.stats) return `slide[${b}]/stat[${k}].text`
+    if (s?.cards) return `slide[${b}]/card[${k}].body`
+  }
+  return null
+}
+
 /** Campos editáveis de um container; null se não for texto editável. */
 export function fieldsFor(containerId: string, raw: RawCarousel): FieldRef[] | null {
   if (RE.coverHook.test(containerId)) return [{ path: 'hook_capa', label: 'Hook da capa', multiline: true, markup: true }]
@@ -106,5 +140,8 @@ export function fieldsFor(containerId: string, raw: RawCarousel): FieldRef[] | n
     const f = m[3]!
     return [{ path: `slides[${b}].cards[${k}].${f}`, label: f === 'title' ? 'Título' : f === 'body' ? 'Texto' : 'Rótulo', multiline: f === 'body', markup: f === 'body' }]
   }
-  return null
+
+  // família tweet: lead/para[k] delegam pro container canônico equivalente
+  const canonical = tweetCanonicalId(containerId, raw)
+  return canonical ? fieldsFor(canonical, raw) : null
 }

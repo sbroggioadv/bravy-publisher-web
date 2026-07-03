@@ -17,7 +17,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SlideStage } from './SlideStage'
 import { SlideThumbs } from './SlideThumbs'
 import { RegenerateSlideButton } from './RegenerateSlideButton'
+import { SlideImageButton } from './SlideImageButton'
 import { Inspector } from './Inspector'
+import { PostSettingsPanel } from './PostSettingsPanel'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StudioToolbar } from './StudioToolbar'
 import { selectableBoxes } from './lib/selectable'
 import { collectScenePayloads } from './lib/content-to-doc'
@@ -86,6 +89,14 @@ export function StudioEditor({ content }: { content: import('@/types/content').C
 
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState(540)
+  // painel lateral direito: inspetor do bloco ↔ configurações globais do post;
+  // selecionar um bloco traz o inspetor de volta (ajuste durante o render)
+  const [sidePanel, setSidePanel] = useState<'inspector' | 'post'>('inspector')
+  const [prevSelection, setPrevSelection] = useState(selectedIds)
+  if (selectedIds !== prevSelection) {
+    setPrevSelection(selectedIds)
+    if (selectedIds.length) setSidePanel('inspector')
+  }
 
   // inicializa overrides + draft de texto + elementos livres; re-inicializa
   // quando o content muda no servidor (ex.: regenerar slide → updatedAt muda)
@@ -178,6 +189,7 @@ export function StudioEditor({ content }: { content: import('@/types/content').C
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{dirty || textDirty ? 'salvando…' : 'salvo'}</span>
+          <SlideImageButton contentId={content.id} position={activeIndex} total={scene?.slides.length ?? 0} />
           <RegenerateSlideButton contentId={content.id} position={activeIndex} total={scene?.slides.length ?? 0} />
           <Button variant="ghost" size="icon" onClick={undo} aria-label="Desfazer">
             <Undo2 className="size-4" />
@@ -221,9 +233,19 @@ export function StudioEditor({ content }: { content: import('@/types/content').C
           )}
         </main>
 
-        {/* inspector */}
+        {/* inspector / configurações globais do post */}
         <aside className="hidden w-60 shrink-0 overflow-y-auto border-l xl:block">
-          <Inspector kit={brandKit} activeIndex={activeIndex} selectedBox={selectedBox} textPx={selectedTextPx} />
+          <Tabs value={sidePanel} onValueChange={(v) => setSidePanel(v as 'inspector' | 'post')} className="px-4 pt-3">
+            <TabsList className="w-full">
+              <TabsTrigger value="inspector">Inspetor</TabsTrigger>
+              <TabsTrigger value="post">Post</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {sidePanel === 'inspector' ? (
+            <Inspector kit={brandKit} activeIndex={activeIndex} selectedBox={selectedBox} textPx={selectedTextPx} />
+          ) : (
+            <PostSettingsPanel />
+          )}
         </aside>
       </div>
 

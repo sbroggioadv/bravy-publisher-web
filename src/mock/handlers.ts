@@ -124,20 +124,6 @@ const routes: MockRoute[] = [
     },
   },
   {
-    match: (m, u) => m === 'post' && u.includes('/render/'),
-    handle: async () => {
-      await delay(500)
-      return { data: { id: `rj_${Date.now()}`, status: 'PROCESSING', progress: 0, attempts: 1 }, status: 200 }
-    },
-  },
-  {
-    match: (m, u) => m === 'get' && u.includes('/render/') && u.includes('/status'),
-    handle: async () => {
-      await delay(300)
-      return { data: { id: 'rj_mock', status: 'COMPLETED', progress: 100, attempts: 1 }, status: 200 }
-    },
-  },
-  {
     match: (m, u) => m === 'get' && u.includes('/publish/status/'),
     handle: async () => {
       await delay(400)

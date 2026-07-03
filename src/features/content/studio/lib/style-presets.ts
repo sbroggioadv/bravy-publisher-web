@@ -4,7 +4,7 @@
  * é só um BrandKit nomeado + template. 5 defaults aqui; estilos do usuário
  * vêm de /brand-kit (kits nomeados do tenant).
  */
-import type { BrandKit, LayoutSpec, TemplateFamily } from '@publisher/scene-engine'
+import type { BrandKit, DocSettings, LayoutSpec, TemplateFamily } from '@publisher/scene-engine'
 import { SEED_BRAND_KIT } from '@publisher/scene-engine'
 
 export interface StylePreset {
@@ -171,6 +171,8 @@ export interface StyleData {
   brand?: BrandKit['brand']
   /** layout do template custom (quando template === 'custom'). */
   layout?: LayoutSpec
+  /** configurações globais do post (ex.: contador de páginas). */
+  settings?: DocSettings
 }
 
 export function presetToStyleData(p: StylePreset): StyleData {

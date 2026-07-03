@@ -38,7 +38,7 @@ export function resolveScene(doc, metrics, brandKit) {
         }
     }
     const typo = typoMap.size ? (id) => typoMap.get(id) : undefined;
-    const raw = program.build(migrated.content, { tokens, metrics, typo });
+    const raw = program.build(migrated.content, { tokens, metrics, typo, settings: migrated.settings });
     const slides = raw.map((rs, index) => ({
         index,
         width: 1080,

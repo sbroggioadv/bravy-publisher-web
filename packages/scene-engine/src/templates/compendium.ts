@@ -82,6 +82,7 @@ function centerGlyph(nodes: SceneNode[], id: string, text: string, style: Resolv
 }
 
 function pageNo(nodes: SceneNode[], ctx: BuildCtx, prefix: string, page: number, total: number): void {
+  if (ctx.settings?.showCounter === false) return;
   const style = st(ctx.tokens, 'mono', 500, 15, 'muted', { ls: 0.12 });
   const txt = `${String(page).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
   const w = ctx.metrics.measure(txt, style).width;
